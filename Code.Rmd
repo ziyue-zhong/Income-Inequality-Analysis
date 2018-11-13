@@ -1,0 +1,225 @@
+---
+title: "Income Inequality Analysis"
+author: "Ziyue Zhong"
+date: "2/28/2018"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+
+```{r ,echo=FALSE }
+library('readxl')
+library(reshape2)
+#read data
+gini <- read_excel('GINI.xls')
+edu <-read_excel('Expenditure on education.xls')
+agri <- read_excel('Agricultural land %.xls')
+GDP_gr <- read_excel('Annual GDP growth %.xls')
+co2emis <- read_excel('CO2 per capita.xls')
+elec_cons <- read_excel('Electric consu per capita.xls')
+exp <- read_excel('Expense(% of GDP).xls')
+tech_exp <- read_excel('High-tech Exports.xls')
+pop_youn <- read_excel('Population ages 15-64 %.xls')
+pop <- read_excel('Population,total.xls')
+unemp <- read_excel('Unemployment(% ).xls')
+
+#melt data from 2006-2009
+gini <- melt(gini, id.vars = "Country Code", measure.vars = c("2006", "2007","2008","2009"))
+edu <- melt(edu, id.vars = "Country Code", measure.vars = c("2006", "2007","2008","2009"))
+agri <- melt(agri, id.vars = "Country Code", measure.vars = c("2006", "2007","2008","2009"))
+GDP_gr <- melt(GDP_gr, id.vars = "Country Code", measure.vars = c("2006", "2007","2008","2009"))
+co2emis <- melt(co2emis, id.vars = "Country Code", measure.vars = c("2006", "2007","2008","2009"))
+elec_cons <- melt(elec_cons, id.vars = "Country Code", measure.vars = c("2006", "2007","2008","2009"))
+exp <- melt(exp, id.vars = "Country Code", measure.vars = c("2006", "2007","2008","2009"))
+tech_exp <- melt(tech_exp, id.vars = "Country Code", measure.vars = c("2006", "2007","2008","2009"))
+pop_youn <- melt(pop_youn, id.vars = "Country Code", measure.vars = c("2006", "2007","2008","2009"))
+pop <- melt(pop, id.vars = "Country Code", measure.vars = c("2006", "2007","2008","2009"))
+unemp <- melt(unemp, id.vars = "Country Code", measure.vars = c("2006", "2007","2008","2009"))
+
+#merge all variables into the dataset
+dt <- data.frame(gini[c('Country Code','value')], edu['value'],
+                   agri['value'],GDP_gr['value'],
+                   co2emis['value'],elec_cons['value'],
+                   exp['value'], tech_exp['value'],
+                   pop_youn['value'],pop['value'],
+                   unemp['value'])
+#change column name
+x <- c('Country code', 'gini','education', 'agriculture', 'GDP_growth', 'co2_emission','elec_con', 'expense', 'tech_exp', 'pop_young', 'pop', 'unemployment')
+colnames(dt) <- x
+
+
+sum(is.null(dt))
+#0
+#dim(dt)
+summary(is.null(dt),)
+
+```
+
+```{r ,echo=FALSE }
+#correlation
+cor(dt[sapply(dt, is.numeric)],use="pairwise.complete.obs")
+
+#explanatory analysis
+par(mfrow=c(1,2))
+hist(dt$gini, col="cadetblue", las=TRUE,cex.main=1.0, ylab = NULL, cex.lab=1.8, cex.axis=1.8)
+hist(dt$education, col="cadetblue", las=TRUE, cex.lab=1.0, ylab = NULL,cex.lab=1.8,  cex.axis=1.8)
+par(mfrow=c(1,2))
+hist(dt$agriculture, col="cadetblue", las=TRUE,cex.main=1.0, ylab = NULL, cex.lab=1.8, cex.axis=1.8)
+hist(dt$GDP_growth, col="cadetblue", las=TRUE,cex.main=1.0, ylab = NULL, cex.lab=1.8, cex.axis=1.8)
+par(mfrow=c(1,2))
+hist(dt$co2_emission, col="cadetblue", las=TRUE, cex.lab=1.0, ylab = NULL, cex.lab=1.8, cex.axis=1.8)
+hist(dt$elec_con, col="cadetblue", las=TRUE,cex.main=1.0, ylab = NULL, cex.lab=1.8, cex.axis=1.8)
+par(mfrow=c(1,2))
+hist(dt$expense, col="cadetblue", las=TRUE,cex.main=1.0, ylab = NULL, cex.lab=1.8, cex.axis=1.8)
+hist(dt$tech_exp, col="cadetblue", las=TRUE, cex.lab=1.0, ylab = NULL, cex.lab=1.8, cex.axis=1.8)
+par(mfrow=c(1,3))
+hist(dt$pop_young, col="cadetblue", las=TRUE,cex.main=1.0, ylab = NULL, cex.lab=1.8, cex.axis=1.8)
+hist(dt$pop, col="cadetblue", las=TRUE,cex.main=1.0, cex.lab=1.8, ylab = NULL, cex.axis=1.8)
+hist(dt$unemployment, col="cadetblue",cex.main=1.0, cex.lab=1.8, ylab = NULL,cex.axis=1.8)
+
+```
+
+
+```{r ,echo=FALSE }
+#multiple linear regression
+
+require (leaps)
+backward.step <- regsubsets(gini~education+agriculture+GDP_growth+co2_emission+
+            elec_con+expense+tech_exp+pop_young+pop+unemployment,
+             data = dt,na.action=na.omit, method="backward", nvmax=15)
+summary(backward.step)
+
+print('RMSE')
+sqrt(summary(backward.step)$rss)
+print('R^2 adjusted')
+summary(backward.step)$adjr2
+print('cp')
+summary(backward.step)$cp
+print('BIC')
+summary(backward.step)$bic
+
+#BIC start to drop at model 9 and cp reach deepest at model 9. RMSE and R2 has little difference between model 9 and model 10. 
+#The least important feature is tech_expense.
+
+#Build our first model withour tech_expense
+lm.01 <- lm(gini~education+agriculture+GDP_growth+co2_emission+
+            elec_con+expense+pop_young+pop+unemployment,
+             data = dt,na.action=na.omit)
+summary(lm.01)
+#Evaluate variable importance using t-statistic
+#GDP_growth and expense have p-value > 0.05
+
+#Build second model without GDP_growth and expense
+lm.02 <- lm(gini~education+agriculture+co2_emission+
+            elec_con+pop_young+pop+unemployment,
+             data = dt,na.action=na.omit)
+summary(lm.02)
+
+#Try remove the co2_emission
+lm.03 <- lm(gini~education+agriculture+
+            elec_con+pop_young+pop+unemployment,
+             data = dt,na.action=na.omit)
+summary(lm.03)
+#partial F-test
+anova(lm.02,lm.03)
+
+#p value = 0.02396 < 0.05 ----- keep co2_emission
+
+#Selected model: lm.02
+#Confidence interval of the model
+confint(lm.02, conf.level=0.95)
+```
+
+
+
+```{r ,echo=FALSE }
+#check regression assumption
+plot(lm.02)
+```
+
+## Including Plots
+
+```{r , echo=FALSE}
+#Drop variables don't need
+dt[c('GDP_growth','expense','tech_exp')] <- NULL
+
+#Correlation Matrix
+cor(dt[sapply(dt, is.numeric)],use="pairwise.complete.obs")
+
+#high correlation between co2_emission and electri_consumption and pop_young ---- remove co2 emission & pop_young
+
+lm.04 <- lm(gini~education+agriculture+
+            elec_con+pop+unemployment,
+             data = dt,na.action=na.omit)
+summary(lm.04)
+#check assumption again
+plot(lm.04)
+
+#
+
+```
+
+```{r ,echo=FALSE}
+
+pairs(dt[, c('gini', 'education', 'logpop', 'log_elec', 'unemployment')], 
+      main="Pairwise Scatterplots of Quantitative Variables", las=TRUE, col="firebrick", pch=19)
+
+boxplot(dt$unemployment)
+#Becasue pop is heavily right skewed. I applied log transformantion to the variable. After the transformation, it is normally distributed.
+dt$logpop = log(dt$pop)
+hist(dt$logpop, col="cadetblue", las=TRUE,cex.main=1.0, ylab = NULL, cex.lab=1.8, cex.axis=1.8)
+
+# According to the scatterplot, elec_con is heavily skewed, I use log to transform it.
+dt$log_elec = log(dt$elec_con)
+
+#Create new regression model with transformed elec_con
+df <- dt[,colSums(is.na(dt))<nrow(dt)]
+
+lm.05 <- lm(gini~education+agriculture+log_elec+
+            logpop+unemployment,
+             data = dt,na.action=na.omit)
+summary(lm.05)
+plot(lm.05)
+
+#Becasue there are constant variance problem, we need to fix outlier problem.
+plot(lm.05, which=4, las=TRUE,  cex.axis=1.4, cex.lab=1.4)
+
+influential <- as.numeric(which(!(cooks.distance(lm.05) < 0.05)))
+dt_screen <- dt[-influential, ]
+
+cooksd <- cooks.distance(lm.05)
+sample_size <- nrow(dt)
+influential <- as.numeric(names(cooksd)[(cooksd > (4/sample_size))])
+dt1 <- dt[-influential, ]
+lm.06 <- lm(gini~education+agriculture+log_elec+
+            logpop+unemployment,
+            data = dt1, na.action=na.omit, )
+
+plot(lm.06, which=4, las=TRUE,  cex.axis=1.4, cex.lab=1.4)
+summary(lm.06)
+plot(lm.06)
+
+```
+
+Check regression assumption:
+1. x variables are fixed. Data is from worldbank, so we assume no measurement error.
+2. constant variance
+According to the 'squared std.residual & fitted' value plot, the red line is flat when you go from left to right, so this assumption is satisfied.
+3. nonlinearity
+According to the 'std. residual & fitted' value plot, there is no obvious trend line, so this assumption is satisfied.
+4. normality
+The theoretical Quantiles plot is slightly skewed while the violation is not severe.
+5. Independence of x
+Since each contry can have influence on each other, this assumption may not be true.  
+6. No collinearity/multicollinearity
+The correlation table shows that there is no collinearity between each variables.
+
+###########################
+
+
+Final Model: Gini = 1.16999*education-0.10082*algriculture-3.06792*log_elec+39.84998log_pop+0.53149unemployment
+
