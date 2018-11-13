@@ -1,7 +1,7 @@
 # Income-Inequality-Analysis-with-Multi-linear-Regression-with-R
 
 
-#Goal
+Goal
 
 In order to explore what factors can have a strong influence on the unequal distribution of wealth of a country, I build a multi-linear regression in R using several selected country-level features as independent variable and GINI index as dependent variable. Here, the GINI index represents the income or wealth distributed to the nation's residents, and is usually used to measure the inequality of income. The country-level features I selected are Co2 emission per capital, electric power consumption, annual GDP growth rate, expense (%) of GDP, government expenditure on education, agricultural land percentage, high-tech exports, population of young people, total population and unemployment rate. 
 
